@@ -119,37 +119,37 @@ Seluruh komputer pengguna berhasil memperoleh konfigurasi IP dinamis secara tepa
    
    ![Konfigurasi dan Binding DHCP R-BARAT](screenshots/01_dhcp_server_r-barat_config_binding.png)
 
-3. **Konfigurasi Pool Pegawai pada Router R-PUSAT**:
+2. **Konfigurasi Pool Pegawai pada Router R-PUSAT**:
    Konfigurasi `POOL-PEGAWAI` serta tabel sewa IP awal.
 
    ![Konfigurasi DHCP Pool Pegawai R-PUSAT](screenshots/02_dhcp_server_r-pusat_pool_pegawai.png)
 
-5. **Detail Status Binding pada Router R-PUSAT**:
+3. **Detail Status Binding pada Router R-PUSAT**:
    Memastikan MAC Address komputer pegawai (`00E0.A3B4.8363`) terikat aktif pada alamat `10.40.224.11`.
 
    ![Detail Binding DHCP R-PUSAT](screenshots/03_dhcp_server_r-pusat_binding_detail.png)
 
-7. **Verifikasi `ipconfig /all` pada PC-PEGAWAI-BALAIKOTA**:
+4. **Verifikasi `ipconfig /all` pada PC-PEGAWAI-BALAIKOTA**:
    Klien menerima IP `10.40.224.11`, netmask `255.255.248.0`, gateway `10.40.224.1`, dan DNS `10.40.239.2`.
 
    ![IPConfig PC Pegawai Balai Kota](screenshots/05_client_pc_pegawai_dhcp_ipconfig.png)
 
-9. **Verifikasi `ipconfig /all` pada PC-PUSKESMAS**:
+5. **Verifikasi `ipconfig /all` pada PC-PUSKESMAS**:
    Klien menerima IP `10.40.238.11`, netmask `255.255.255.0`, gateway `10.40.238.1`, dan DNS `10.40.239.2`.
 
    ![IPConfig PC Puskesmas](screenshots/07_client_pc_puskesmas_dhcp_ipconfig.png)
 
-11. **Konfigurasi Service DHCP Pool CCTV pada SRV-DC**:
+6. **Konfigurasi Service DHCP Pool CCTV pada SRV-DC**:
    Tampilan parameter service DHCP untuk subnet CCTV pada server Data Center.
 
-  [Konfigurasi Service DHCP Pool CCTV di SRV-DC](screenshots/08_dhcp_server_srv-dc_pool_cctv.png)
+   ![Konfigurasi Service DHCP Pool CCTV di SRV-DC](screenshots/08_dhcp_server_srv-dc_pool_cctv.png)
 
-13. **Konfigurasi `ip helper-address` pada Interface R-DC**:
+7. **Konfigurasi `ip helper-address` pada Interface R-DC**:
    Potongan running-config antarmuka `Gi0/1` R-DC yang menjalankan peran DHCP Relay ke `10.40.239.2`.
 
   ![Konfigurasi IP Helper-Address R-DC](screenshots/09_dhcp_relay_r-dc_ip_helper_config.png)
 
-15. **Verifikasi `ipconfig /all` pada PC-CCTV-KOTA (Pembuktian Relay)**:
+8. **Verifikasi `ipconfig /all` pada PC-CCTV-KOTA (Pembuktian Relay)**:
    Klien CCTV memperoleh IP `10.40.96.11` dengan gateway `10.40.96.1`, dan field **DHCP Server** tertulis **`10.40.239.2`**. Ini membuktikan secara langsung bahwa paket DHCP berhasil diseberangkan lintas router dari Data Center.
 
   ![IPConfig PC CCTV Kota](screenshots/06_client_pc_cctv_relay_dhcp_ipconfig.png)
@@ -211,14 +211,17 @@ Akses internet dari perangkat pengguna diuji dari `PC-PEGAWAI-BALAIKOTA` menuju 
 
 1. **Konfigurasi Interface NAT R-PUSAT**:
    Potongan running-config `R-PUSAT` membuktikan status `ip nat outside` pada `Gi0/0` serta `ip nat inside` pada `Gi0/1` dan `Gi0/2`.
+   
    ![Konfigurasi Antarmuka NAT R-PUSAT](screenshots/04_r-pusat_running_config_interfaces_nat_gre.png)
 
 2. **Uji Ping ke 8.8.8.8 dari PC Pegawai Balai Kota**:
    Empat paket ICMP dijawab lengkap dengan waktu tempuh `<1ms` dan `TTL=126`.
+   
    ![Ping ke 8.8.8.8 dari PC Pegawai](screenshots/10_nat_test_ping_google_8888_pc_pegawai.png)
 
 3. **Verifikasi Tabel `show ip nat translations` pada R-PUSAT**:
    Tabel membuktikan alamat **Inside Local** `10.40.224.11` ditranslasikan secara dinamis menjadi alamat **Inside Global** `203.0.113.21` untuk menjangkau destinasi **Outside Global** `8.8.8.8`.
+   
    ![Tabel NAT Translations R-PUSAT](screenshots/11_nat_show_ip_nat_translations_r-pusat.png)
 
 ---
