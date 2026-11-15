@@ -105,9 +105,9 @@ Semua nama bawaan sudah diganti (contoh: `R-PUSAT`, `SW-BALAIKOTA`, `PC-CCTV-KOT
 | :---------- | :-------------------- | :------------------------------ | :------------ | :-------------- | :--------------- |
 | R-PUSAT     | Gi0/0                 | Link ke R-ISP (IP publik)       | 203.0.113.21  | 255.255.255.252 | 203.0.113.20/30  |
 | R-PUSAT     | Gi0/1                 | LAN Pegawai Balai Kota          | 10.40.224.1   | 255.255.248.0   | 10.40.224.0/21   |
-| R-PUSAT     | Gi0/2                 | LAN Server Balai Kota           | 10.40.241.1   | 255.255.255.224 | 10.40.241.0/27   |
+| R-PUSAT     | Gi0/2                 | L2 ke R-UTARA                   | 10.40.241.37  | 255.255.255.252 | 10.40.241.36/30  |
 | R-PUSAT     | Vlan11 (port Fa0/0/0) | L1 ke R-DC                      | 10.40.241.33  | 255.255.255.252 | 10.40.241.32/30  |
-| R-PUSAT     | Vlan12 (port Fa0/0/1) | L2 ke R-UTARA                   | 10.40.241.37  | 255.255.255.252 | 10.40.241.36/30  |
+| R-PUSAT     | Vlan12 (port Fa0/0/1) | LAN Server Balai Kota           | 10.40.241.1   | 255.255.255.224 | 10.40.241.0/27   |
 | R-PUSAT     | Vlan13 (port Fa0/0/2) | L3 ke R-SELATAN                 | 10.40.241.41  | 255.255.255.252 | 10.40.241.40/30  |
 | R-PUSAT     | Vlan14 (port Fa0/0/3) | L4 ke R-TIMUR                   | 10.40.241.45  | 255.255.255.252 | 10.40.241.44/30  |
 | R-PUSAT     | Vlan15 (port Fa0/1/0) | L5 ke R-BARAT                   | 10.40.241.49  | 255.255.255.252 | 10.40.241.48/30  |
@@ -197,16 +197,16 @@ write memory
 
 ### 2.5 Konfigurasi khusus R-PUSAT (2911 + HWIC-4ESW)
 
-`R-PUSAT` butuh 8 port: 3 port Gigabit bawaan untuk ISP dan dua LAN, serta 5 port untuk link L1 sampai L5. Lima port tersebut berasal dari dua modul HWIC-4ESW. Port modul adalah port switch, sehingga tiap link ditaruh di VLAN sendiri dan IP dipasang di `interface VlanXX`.
+`R-PUSAT` butuh 8 port: 3 port Gigabit bawaan (ISP, LAN Pegawai, dan link L2 ke R-UTARA), serta 5 port dari dua modul HWIC-4ESW (link L1, L3, L4, L5, dan LAN Server). Port modul adalah port switch, sehingga tiap port ditaruh di VLAN sendiri dan IP dipasang di `interface VlanXX`.
 
 ```cisco
 enable
 vlan database
- vlan 11 name L1-DC
- vlan 12 name L2-UTARA
- vlan 13 name L3-SELATAN
- vlan 14 name L4-TIMUR
- vlan 15 name L5-BARAT
+ vlan 11
+ vlan 12
+ vlan 13
+ vlan 14
+ vlan 15
  exit
 configure terminal
 hostname R-PUSAT
@@ -215,13 +215,18 @@ interface FastEthernet0/0/0
  switchport mode access
  switchport access vlan 11
  no shutdown
-! (Fa0/0/1 -> vlan 12, Fa0/0/2 -> vlan 13, Fa0/0/3 -> vlan 14, Fa0/1/0 -> vlan 15)
+! (Fa0/0/1 -> vlan 12 (LAN Server), Fa0/0/2 -> vlan 13, Fa0/0/3 -> vlan 14, Fa0/1/0 -> vlan 15)
 !
 interface Vlan11
  description L1 ke R-DC
  ip address 10.40.241.33 255.255.255.252
  no shutdown
-! (Vlan12 .37, Vlan13 .41, Vlan14 .45, Vlan15 .49 dengan pola yang sama)
+! (Vlan13 .41, Vlan14 .45, Vlan15 .49 dengan pola yang sama)
+!
+interface Vlan12
+ description LAN Server Balai Kota
+ ip address 10.40.241.1 255.255.255.224
+ no shutdown
 !
 interface GigabitEthernet0/0
  description Link ke R-ISP (IP publik)
@@ -234,8 +239,8 @@ interface GigabitEthernet0/1
  no shutdown
 !
 interface GigabitEthernet0/2
- description LAN Server Balai Kota
- ip address 10.40.241.1 255.255.255.224
+ description L2 ke R-UTARA
+ ip address 10.40.241.37 255.255.255.252
  no shutdown
 ```
 
@@ -345,12 +350,12 @@ Semua pengujian dijalankan dari CLI router di Packet Tracer dengan perintah `pin
 ### 4.1 Interface dan tabel routing
 
 - Alamat IP seluruh interface router dan server sudah sesuai tabel pada bagian 2 (semua interface berstatus `up/up`).
-- Tabel routing tiap router sesuai bagian 3. Contoh `show ip route` di R-PUSAT: 13 route static ke LAN dan link router lain, 8 route connected (Gi0/0, Gi0/1, Gi0/2, dan Vlan11 sampai Vlan15), serta default route `S* 0.0.0.0/0 via 203.0.113.22`. Gambaran ini adalah kondisi sebelum Tunnel GRE (Bagian 8) dipasang; setelah itu route ke LAN Pelabuhan memakai next hop tunnel `192.168.5.2`.
+- Tabel routing tiap router sesuai bagian 3. Contoh `show ip route` di R-PUSAT: route static ke seluruh LAN cabang dan link router lain, route connected (Gi0/0, Gi0/1, Gi0/2, dan Vlan11 sampai Vlan15), serta default route `S* 0.0.0.0/0 via 203.0.113.22`. Route ke LAN Pelabuhan memakai next hop tunnel GRE `192.168.5.2` (Bagian 8).
 
 #### Bukti Pengujian:
 
 1. **`show ip interface brief` pada R-PUSAT**:
-   Menampilkan `Gi0/0`, `Gi0/1`, `Gi0/2`, dan `Vlan11` sampai `Vlan15` dengan IP sesuai tabel dan status `up/up`.
+   Menampilkan `Gi0/0`, `Gi0/1`, `Gi0/2`, dan `Vlan11` sampai `Vlan15` dengan IP sesuai tabel dan status `up/up` (juga `Loopback0` dan `Tunnel0` tambahan dari Anggota 2).
 
    ![Interface Brief R-PUSAT](screenshots/007_ipbrief_r_pusat.png)
 
@@ -487,9 +492,9 @@ Pada pengerjaan awal, R-PUSAT memakai Router-PT (PT1000, IOS 12.2) dengan port `
 | :---------- | :--------- | :--------------- | :----------- | :--------------------- |
 | ISP         | Gi0/0      | Gi0/0            | 203.0.113.21 | R-ISP Gi0/0            |
 | LAN Pegawai | Gi0/1      | Gi0/1            | 10.40.224.1  | SW-BALAIKOTA Fa0/1     |
-| LAN Server  | Gi0/2      | Gi0/2            | 10.40.241.1  | SW-SRV-BALAIKOTA Fa0/1 |
+| L2          | Gi0/2      | Gi0/2            | 10.40.241.37 | R-UTARA Gi9/0          |
 | L1          | Fa0/0/0    | Vlan11           | 10.40.241.33 | R-DC Gi0/0             |
-| L2          | Fa0/0/1    | Vlan12           | 10.40.241.37 | R-UTARA Gi9/0          |
+| LAN Server  | Fa0/0/1    | Vlan12           | 10.40.241.1  | SW-SRV-BALAIKOTA Fa0/1 |
 | L3          | Fa0/0/2    | Vlan13           | 10.40.241.41 | R-SELATAN Gi0/0        |
 | L4          | Fa0/0/3    | Vlan14           | 10.40.241.45 | R-TIMUR Gi0/0          |
 | L5          | Fa0/1/0    | Vlan15           | 10.40.241.49 | R-BARAT Gi0/0          |
@@ -498,14 +503,14 @@ Pada pengerjaan awal, R-PUSAT memakai Router-PT (PT1000, IOS 12.2) dengan port `
 
 - Modul HWIC-4ESW berisi port switch (bukan port routed). Setiap port diset `switchport mode access` pada VLAN tersendiri, lalu IP link /30 dipasang di `interface Vlan11` sampai `Vlan15`. Dengan satu port per VLAN, tiap interface VLAN berperilaku seperti port router biasa.
 - Modul HWIC-1GE-SFP tidak dipakai untuk L5 karena port-nya fiber dan tidak bisa disambung ke port tembaga R-BARAT. Karena itu dipakai modul HWIC-4ESW kedua.
-- Alamat IP, hostname, DHCP pool Pegawai (`POOL-PEGAWAI`), NAT overload, access-list 1, dan 13 static route (plus default route) R-PUSAT **tidak berubah**. Hanya nama interface yang berubah. Pada tabel routing, jaringan link L1-L5 kini berstatus connected lewat Vlan11 sampai Vlan15.
+- Alamat IP, hostname, DHCP pool Pegawai (`POOL-PEGAWAI`), NAT overload, access-list 1, dan 13 static route (plus default route) R-PUSAT **tidak berubah**. Hanya nama interface yang berubah, dan pada konfigurasi akhir link L2 berada di `Gi0/2` sedangkan LAN Server di `Vlan12` (`Fa0/0/1`). Pada tabel routing, jaringan link L1-L5 kini berstatus connected lewat Vlan11 sampai Vlan15.
 - Router lain (R-DC, R-UTARA, R-SELATAN, R-TIMUR, R-BARAT, R-PELABUHAN, R-ISP) tidak diubah sama sekali; tabel routing dan DHCP tetap sama, dan ping lintas LAN yang diuji tetap berhasil setelah penggantian.
 - Konfigurasi VLAN dibuat dengan `vlan database` (di Packet Tracer ini perintah `vlan N` pada mode konfigurasi tidak diterima).
 
 ### 5.3 Catatan untuk pengerjaan berikutnya
 
-- **Tunnel GRE (Anggota 2):** R-PUSAT sekarang mendukung `interface Tunnel0` (dikerjakan pada Bagian 8). Perhatikan bahwa link L2 di R-PUSAT adalah `interface Vlan12` (`10.40.241.37`), bukan `Gi0/2`; `Gi0/2` adalah LAN Server Balai Kota (`10.40.241.1`).
-- **OSPF (Anggota 3):** di R-PUSAT, interface LAN (`Gi0/1`, `Gi0/2`) dijadikan passive; `Vlan11` sampai `Vlan15` adalah backbone sehingga tidak boleh passive. Pernyataan `network` tetap berdasarkan alamat link /30.
+- **Tunnel GRE (Anggota 2):** R-PUSAT sekarang mendukung `interface Tunnel0` (dikerjakan pada Bagian 8). Tunnel source memakai `Gi0/2` (`10.40.241.37`), yaitu sisi R-PUSAT pada link L2 ke R-UTARA.
+- **OSPF (Anggota 3):** di R-PUSAT, interface LAN (`Gi0/1` dan `Vlan12`) dijadikan passive; `Gi0/2` (L2) serta `Vlan11`, `Vlan13`, `Vlan14`, dan `Vlan15` adalah backbone sehingga tidak boleh passive. Pernyataan `network` tetap berdasarkan alamat link /30.
 - **Link L7 (Anggota 3):** `R-DC` (2911) sudah memakai ketiga port Gigabit bawaan, sehingga link L7 memakai modul port tambahan (lihat bagian Dynamic Routing OSPF Anggota 3). Jalankan `write memory` sebelum memasang modul karena router restart dan konfigurasi yang belum disimpan hilang.
 
 ---
