@@ -380,7 +380,7 @@ Semua pengujian dijalankan dari CLI router di Packet Tracer dengan perintah `pin
    ![Tabel Routing R-DC](screenshots/011_route_r_dc.png)
 
 6. **`show ip route` pada R-PELABUHAN**:
-   Hanya default route ke R-UTARA (`10.40.241.53`).
+   Default route ke R-UTARA (`10.40.241.53`), ditambah route ke LAN Balai Kota lewat tunnel GRE (`192.168.5.1`) dari Anggota 2.
 
    ![Tabel Routing R-PELABUHAN](screenshots/012_route_r_pelabuhan.png)
 
